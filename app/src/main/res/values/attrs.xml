@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="TankMovementView">
+        <attr name="tmv_path_color" format="color" />
+        <attr name="tmv_path_width" format="dimension" />
+
+        <attr name="tmv_destination_point_radius" format="dimension" />
+        <attr name="tmv_destination_point_color" format="color" />
+
+        <attr name="tmv_tank_rotation_speed" format="integer" />
+        <attr name="tmv_tank_speed" format="integer" />
+        <attr name="tmv_tank_size" format="dimension" />
+        <attr name="tmv_tank_icon" format="reference" />
+    </declare-styleable>
+
+</resources>

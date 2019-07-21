@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <com.chichkanov.tankmovement.TankMovementView
+        android:id="@+id/tankView1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        app:tmv_destination_point_color="@color/blue"
+        app:tmv_destination_point_radius="8dp"
+        app:tmv_path_color="@color/red"
+        app:tmv_tank_rotation_speed="10"
+        app:tmv_path_width="4dp"
+        app:tmv_tank_icon="@drawable/ic_taxi"
+        app:tmv_tank_speed="20" />
+
+    <com.chichkanov.tankmovement.TankMovementView
+        android:id="@+id/tankView2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/green"
+        app:tmv_path_color="@color/gray"
+        app:tmv_path_width="8dp"
+        app:tmv_tank_size="60dp"
+        app:tmv_tank_speed="8" />
+
+    <com.chichkanov.tankmovement.TankMovementView
+        android:id="@+id/tankView3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/yellow"
+        android:fitsSystemWindows="true"
+        app:tmv_destination_point_radius="16dp"
+        app:tmv_path_color="@android:color/white"
+        app:tmv_path_width="16dp"
+        app:tmv_tank_size="40dp"
+        app:tmv_tank_speed="10" />
+
+</LinearLayout>

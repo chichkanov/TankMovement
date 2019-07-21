@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="tmv_default_tank_size">32dp</dimen>
+    <dimen name="tmv_default_path_width">8dp</dimen>
+
+    <dimen name="tmv_default_destination_point_radius">4dp</dimen>
+</resources>

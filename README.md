@@ -1,9 +1,9 @@
-#  ![Icon](https://github.com/chichkanov/app_icon.png)  TankMovement
+#  ![Icon](https://github.com/chichkanov/TankMovement/blob/feature/app_description/static/app_icon.png)  TankMovement
 Tank Movement Emulator Android Application<br>
 
-![FirstScreen](https://github.com/chichkanov/first_screen.png)
-![SecondScreen](https://github.com/chichkanov/second_screen.png)
-![ThirdScreen](https://github.com/chichkanov/third_screen.png)
+![FirstScreen](https://github.com/chichkanov/TankMovement/blob/feature/app_description/static/screen_first.png)
+![SecondScreen](https://github.com/chichkanov/TankMovement/blob/feature/app_description/static/screen_second.png)
+![ThirdScreen](https://github.com/chichkanov/TankMovement/blob/feature/app_description/static/screen_third.png)
 
 ## Functions
 

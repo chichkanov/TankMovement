@@ -15,14 +15,21 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.view.View
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import kotlinx.android.parcel.Parcelize
 import kotlin.math.atan2
 import kotlin.math.roundToInt
 
+/*
+Заюзал SurfaceView для оптимизации отрисовки постоянной анимации объектов
+Еще лучше использовать OpenGL для хардверной отрисовки. В обычном SurfaceView - софтверная
+ */
 class TankMovementView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
-) : View(context, attrs, defStyleAttr) {
+) : SurfaceView(context, attrs, defStyleAttr), SurfaceHolder.Callback {
+
+    private val backgroundColor: Int
 
     private var destinationCoordinates: Coordinates? = null
     private var destinationPointRadius: Float
@@ -44,12 +51,16 @@ class TankMovementView @JvmOverloads constructor(
     private var tempPos = FloatArray(2)
     private var tempTan = FloatArray(2)
 
+    private lateinit var thread: MovementThread
+
     init {
         val typedArray = context.obtainStyledAttributes(attrs, R.styleable.TankMovementView, defStyleAttr, 0)
 
         try {
             val pathColor = typedArray.getColor(R.styleable.TankMovementView_tmv_path_color, Color.GRAY)
             pathPaint.color = pathColor
+
+            backgroundColor = typedArray.getColor(R.styleable.TankMovementView_tmv_background_color, Color.WHITE)
 
             val pathWidth = typedArray.getDimension(
                 R.styleable.TankMovementView_tmv_path_width,
@@ -69,51 +80,31 @@ class TankMovementView @JvmOverloads constructor(
             )
         } finally {
             typedArray.recycle()
+            holder.addCallback(this)
         }
     }
 
-    override fun onDraw(canvas: Canvas) {
-        canvas.drawPath(movePath, pathPaint)
+    override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
+        // Empty
+    }
 
-        destinationCoordinates?.let { coord ->
-            tankBitmapMatrix.reset()
-
-            canvas.drawCircle(coord.x, coord.y, destinationPointRadius, destinationPaint)
-
-            when {
-                tankProperties.targetAngle - tankProperties.currentAngle > tankProperties.rotationSpeed -> {
-                    tankProperties.currentAngle += tankProperties.rotationSpeed
-                    tankProperties.updateMatrix(tankBitmapMatrix)
-                    invalidate()
-                }
-                tankProperties.currentAngle - tankProperties.targetAngle > tankProperties.rotationSpeed -> {
-                    tankProperties.currentAngle -= tankProperties.rotationSpeed
-                    tankProperties.updateMatrix(tankBitmapMatrix)
-                    invalidate()
-                }
-                else -> {
-                    tankProperties.currentAngle = tankProperties.targetAngle
-                    if (tankProperties.distanceGone < pathLength) {
-                        pathMeasure.getPosTan(tankProperties.distanceGone, tempPos, tempTan)
-
-                        tankProperties.targetAngle = (atan2(tempTan[1], tempTan[0]) * 180.0 / Math.PI).toFloat()
-                        tankProperties.coordinates.x = tempPos[0] - tankProperties.offsetX
-                        tankProperties.coordinates.y = tempPos[1] - tankProperties.offsetY
-
-                        tankProperties.updateMatrix(tankBitmapMatrix)
-
-                        tankProperties.distanceGone += tankProperties.speed
-                        invalidate()
-                    } else {
-                        tankProperties.updateMatrix(tankBitmapMatrix)
-                        destinationCoordinates = null
-                        invalidate()
-                    }
-                }
+    override fun surfaceDestroyed(holder: SurfaceHolder?) {
+        var retry = true
+        thread.setRunning(false)
+        while (retry) {
+            try {
+                thread.join()
+                retry = false
+            } catch (e: InterruptedException) {
+                // Ignore
             }
         }
+    }
 
-        canvas.drawBitmap(tankBitmap, tankBitmapMatrix, null)
+    override fun surfaceCreated(holder: SurfaceHolder) {
+        thread = MovementThread(holder)
+        thread.setRunning(true)
+        thread.start()
     }
 
     // Пока не поддерживаются Спец возможности
@@ -131,8 +122,6 @@ class TankMovementView @JvmOverloads constructor(
 
         pathMeasure = PathMeasure(movePath, false)
         pathLength = pathMeasure.length
-
-        invalidate()
 
         return super.onTouchEvent(event)
     }
@@ -230,6 +219,84 @@ class TankMovementView @JvmOverloads constructor(
         fun updateMatrix(tankMatrix: Matrix) {
             tankMatrix.postRotate(currentAngle, offsetX, offsetY)
             tankMatrix.postTranslate(coordinates.x, coordinates.y)
+        }
+    }
+
+    inner class MovementThread(
+        private val surfaceHolder: SurfaceHolder
+    ) : Thread() {
+        private var run = false
+
+        fun setRunning(run: Boolean) {
+            this.run = run
+        }
+
+        override fun run() {
+            var canvas: Canvas?
+            while (run) {
+                try {
+                    /*
+                    16 ms = ±60 fps. Не самое оптимальное решение, но рабочее
+                    + В геймдеве не очень хорошо просчет логики с отрисовкой,
+                    в идеале для отрисовки - один тред, для логики - другой
+                     */
+                    sleep(16)
+                } catch (e1: InterruptedException) {
+                    e1.printStackTrace()
+                }
+
+                canvas = null
+                try {
+                    canvas = surfaceHolder.lockCanvas(null)
+
+                    synchronized(surfaceHolder) {
+                        canvas.drawColor(backgroundColor)
+                        canvas.drawPath(movePath, pathPaint)
+
+                        destinationCoordinates?.let { coord ->
+                            tankBitmapMatrix.reset()
+
+                            canvas.drawCircle(coord.x, coord.y, destinationPointRadius, destinationPaint)
+
+                            when {
+                                tankProperties.targetAngle - tankProperties.currentAngle > tankProperties.rotationSpeed -> {
+                                    tankProperties.currentAngle += tankProperties.rotationSpeed
+                                    tankProperties.updateMatrix(tankBitmapMatrix)
+                                }
+                                tankProperties.currentAngle - tankProperties.targetAngle > tankProperties.rotationSpeed -> {
+                                    tankProperties.currentAngle -= tankProperties.rotationSpeed
+                                    tankProperties.updateMatrix(tankBitmapMatrix)
+                                }
+                                else -> {
+                                    tankProperties.currentAngle = tankProperties.targetAngle
+                                    if (tankProperties.distanceGone < pathLength) {
+                                        pathMeasure.getPosTan(tankProperties.distanceGone, tempPos, tempTan)
+
+                                        tankProperties.targetAngle = (atan2(tempTan[1], tempTan[0]) * 180.0 / Math.PI)
+                                            .toFloat()
+
+                                        tankProperties.coordinates.x = tempPos[0] - tankProperties.offsetX
+                                        tankProperties.coordinates.y = tempPos[1] - tankProperties.offsetY
+
+                                        tankProperties.updateMatrix(tankBitmapMatrix)
+
+                                        tankProperties.distanceGone += tankProperties.speed
+                                    } else {
+                                        tankProperties.updateMatrix(tankBitmapMatrix)
+                                        destinationCoordinates = null
+                                    }
+                                }
+                            }
+                        }
+
+                        canvas.drawBitmap(tankBitmap, tankBitmapMatrix, null)
+                    }
+                } finally {
+                    if (canvas != null) {
+                        surfaceHolder.unlockCanvasAndPost(canvas)
+                    }
+                }
+            }
         }
     }
 
